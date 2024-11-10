@@ -6,7 +6,6 @@ import numpy as np
 import math
 
 app = Ursina()
-ui = SimulationUI()
 
 sol = Entity(model= "sphere",  scale=2, texture = "textures/2k_sun.jpg")
 tierra = Planet(
@@ -18,6 +17,9 @@ tierra = Planet(
     material="textures/earth albedo.jpg",
     escala=1,
 )
+panel_tierra = SimulationUI(tierra)
+
+panel_tierra.disable()
 
 class Sky(Entity):
     def __init__(self):
@@ -25,7 +27,7 @@ class Sky(Entity):
             model = 'sphere',
             texture = 'textures/StarsMap_2500x1250.jpg',
             parent = scene,
-            scale = 150,
+            scale = 200,
             double_sided = True
         )
 
@@ -36,7 +38,11 @@ EditorCamera()
 def update():
     dt = time.dt # Delta time en cada frame
     #sol.rotation_y += dt * 5
-    tierra.actualizar_posicion(sol.position, dt, ui.factor_velocidad)
+
+    # Actualizar posiciones
+    for entidad in scene.entities:
+        if isinstance(entidad, Planet):
+            entidad.actualizar_posicion(sol.position, dt)
 
 
 

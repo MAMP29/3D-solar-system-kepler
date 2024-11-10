@@ -1,6 +1,8 @@
 import math
 from ursina import Entity
 from ursina import Vec3
+from ursina import scene
+from simulatioui import SimulationUI
 
 
 G = 1# Constante de gravitación universal
@@ -13,7 +15,8 @@ class Planet(Entity):
         super().__init__(
             model=modelp,
             scale=escala,
-            texture=material
+            texture=material,
+            collider='sphere'
         )
 
         # Para convertir unidades astronómicas a unidades de visualización para nuestro entorno
@@ -29,13 +32,33 @@ class Planet(Entity):
         self.velocidad_base = (2 * math.pi) / periodo_orbital# Usado para determinar la velocidad angular promedio del objeto
 
         self.angulo = 0
+        self.factor_velocidad = 1
 
+        # Panel de control (inicialmente invisible)
+        self.panel_control = SimulationUI(self)
+        self.panel_control.disable()
+
+        # Función de clic
+        self.on_click = self.toggle_panel
+
+    def toggle_panel(self):
+
+        # Desactivar todos los otros paneles primero
+        for entidad in scene.entities:
+            if isinstance(entidad, Planet) and entidad != self:
+                entidad.panel_control.disable()
+
+        # Activar el panel de control del planeta
+        if self.panel_control.enabled:
+            self.panel_control.disable()
+        else:
+            self.panel_control.enable()
 
     # Actualiza la posición del planeta, seguimos un planteamiento basado en orbitas, donde el cálculo de posición es denotado por la orbita
-    def actualizar_posicion(self, centro_pos: Vec3, dt: float, factor_velocidad: float):
+    def actualizar_posicion(self, centro_pos: Vec3, dt: float):
         # Calcular velocidad angular instantánea según la segunda ley de Kepler
         radio_actual = self.semieje_mayor * (1 - self.excentricidad * math.cos(self.angulo))
-        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2 * factor_velocidad # Factor de velocidad para ajustar la velocidad
+        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2 * self.factor_velocidad # Factor de velocidad para ajustar la velocidad
 
         # Actualizar ángulo con velocidad variable
         self.angulo += velocidad_angular * dt
