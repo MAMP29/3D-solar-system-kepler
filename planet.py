@@ -32,10 +32,10 @@ class Planet(Entity):
 
 
     # Actualiza la posición del planeta, seguimos un planteamiento basado en orbitas, donde el cálculo de posición es denotado por la orbita
-    def actualizar_posicion(self, centro_pos: Vec3, dt: float):
+    def actualizar_posicion(self, centro_pos: Vec3, dt: float, factor_velocidad: float):
         # Calcular velocidad angular instantánea según la segunda ley de Kepler
         radio_actual = self.semieje_mayor * (1 - self.excentricidad * math.cos(self.angulo))
-        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2
+        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2 * factor_velocidad # Factor de velocidad para ajustar la velocidad
 
         # Actualizar ángulo con velocidad variable
         self.angulo += velocidad_angular * dt
