@@ -8,14 +8,14 @@ app = Ursina()
 
 sol = Entity(model= "sphere",  scale=2, texture = "textures/2k_sun.jpg")
 tierra = Planet(
-    nombre="Tierra", 
-    masa=1,  
-    radio=1, 
-    posicion=Vec3(10, 0, 0), 
-    velocidad=Vec3(0, 0, 2), 
-    periodo=365, 
-    modelp="sphere", 
-    material="textures/earth albedo.jpg")
+    nombre="Tierra",
+    distancia_ua=1.0,
+    periodo_orbital=365.25, # días
+    excentricidad=0.0167,
+    modelp="sphere",
+    material="textures/earth albedo.jpg",
+    escala=1,
+)
 
 class Sky(Entity):
     def __init__(self):
@@ -33,6 +33,7 @@ EditorCamera()
 
 def update():
     dt = time.dt # Delta time en cada frame
+    #sol.rotation_y += dt * 5
     tierra.actualizar_posicion(sol.position, dt)
 
 

@@ -1,3 +1,4 @@
+import math
 from ursina import Entity
 from ursina import Vec3
 
@@ -8,56 +9,46 @@ M_SOLAR = 100 # Masa del sol en kilogramos
 # Clase que representa un planeta
 # El modelo es un atributo, pues hay algunos personalizados
 class Planet(Entity):
-    def __init__(self, nombre: str, masa: float, radio: float, posicion, velocidad, periodo: float, modelp, material):
+    def __init__(self, nombre: str, distancia_ua: float, periodo_orbital: float, excentricidad: float, modelp, material, escala: float = 1):
         super().__init__(
             model=modelp,
-            scale=radio,
-            texture=material,
-            position=posicion
+            scale=escala,
+            texture=material
         )
+
+        # Para convertir unidades astronómicas a unidades de visualización para nuestro entorno
+        ESCALA_DISTANCIA = 20 # 20 unidades = 1 UA (unidades astronómicas)
+
         self.nombre = nombre
-        self.masa = masa
-        self.radio = radio
-        self.posicion = posicion # Vector de posición
-        self.velocidad = velocidad.normalized() * 2  # Normalizamos y ajustamos la velocidad inicial
-        self.periodo = periodo # Periodo orbital
-        #self.entity = Entity(model=modelp, scale=radio, texture=material)
+        self.semieje_mayor = distancia_ua * ESCALA_DISTANCIA # Representar distancias proporcionales a las escalas establecidas
+        self.excentricidad = excentricidad
 
-    # Para la representación de la posición y velocidad se considera las leyes del movimiento de Newton, basadas en la constante de gravitación
-    # universal
+        # La velocidad angular varía según la posición en la órbita
+        # Período en días convertido a nuestra escala de tiempo
+        self.periodo = periodo_orbital
+        self.velocidad_base = (2 * math.pi) / periodo_orbital# Usado para determinar la velocidad angular promedio del objeto
 
-    # Calcula la aceleración de un planeta hacia al sol, se basa en la distancia y la ley de gravitación universal
-    def calcular_aceleracion(self, sol_posicion):
-        # Distancia al sol
-        distancia = self.posicion - sol_posicion
-        r = distancia.length()
-        if r < 0.1:  # Evitar divisiones por números muy pequeños
-            return Vec3(0,0,0)
-        
-        # Aceleración por la ley de gravitación universal
-        aceleracion = -G * M_SOLAR / r**2
+        self.angulo = 0
 
-        vector = Vec3(0,0,0)
-        #print("NORMALIZED")
-        #print(type(distancia.normalized()))
 
-        return distancia.normalized() * aceleracion
+    # Actualiza la posición del planeta, seguimos un planteamiento basado en orbitas, donde el cálculo de posición es denotado por la orbita
+    def actualizar_posicion(self, centro_pos: Vec3, dt: float):
+        # Calcular velocidad angular instantánea según la segunda ley de Kepler
+        radio_actual = self.semieje_mayor * (1 - self.excentricidad * math.cos(self.angulo))
+        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2
 
-    def actualizar_posicion(self, sol_posicion, dt):
-        print(f"Posición actual: {self.posicion}")
-        print(f"Velocidad actual: {self.velocidad}")
+        # Actualizar ángulo con velocidad variable
+        self.angulo += velocidad_angular * dt
         
-        # Calcular aceleración
-        aceleracion = self.calcular_aceleracion(sol_posicion)
-        print(f"Aceleración calculada: {aceleracion}")
+        # Conversión de corrdenadas polares a cartesianas
+        x = math.cos(self.angulo) * radio_actual
+        z = math.sin(self.angulo) * radio_actual
         
-        # Actualizar velocidad
-        self.velocidad += aceleracion * dt
-        #print("Velocidad:", self.velocidad)
-        
-        # Actualizar la posición
-        self.posicion += self.velocidad * dt
-        #print("Posición actualizada:", self.posicion)
-        
-        # Actualizar la entidad gráfica en Ursina
-        self.position = self.posicion
+        self.position = centro_pos + Vec3(x, 0, z)
+        self.rotation_y += dt * 20 # Agrega rotación al planeta para simular su rotación sobre su propio eje
+
+        # Debug info
+        print(f"{self.nombre}:")
+        print(f"Radio actual (UA): {radio_actual/20:.2f}")
+        print(f"Velocidad angular: {velocidad_angular:.2f}")
+
