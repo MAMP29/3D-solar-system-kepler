@@ -1,3 +1,5 @@
 __pycache__/planet.cpython-312.pyc
 __pycache__/simulatioui.cpython-312.pyc
 __pycache__/camera.cpython-312.pyc
+__pycache__/orbita.cpython-312.pyc
+.gitignore
