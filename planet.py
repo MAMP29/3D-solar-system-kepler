@@ -5,41 +5,57 @@ from ursina import scene
 from simulatioui import SimulationUI
 
 
-G = 1# Constante de gravitación universal
-M_SOLAR = 100 # Masa del sol en kilogramos
+# Constantes físicas
+masa_sol = 1.989e30  # kg
+G = 6.67430e-11     # m/s²
+UA = 149597870700   # metros (1 Unidad Astronómica)
+
+# Constantes de visualización
+ESCALA_DISTANCIA = 10
+ESCALA_TAMAÑO_BASE = 0.3
+ESCALA_TIEMPO = 1e-5  # Factor para acelerar la simulación
 
 # Clase que representa un planeta
 # El modelo es un atributo, pues hay algunos personalizados
 class Planet(Entity):
     def __init__(self, nombre: str, distancia_ua: float, periodo_orbital: float, excentricidad: float, modelp, material, escala: float = 1):
+        
+
+        # Convertir UA a metros para cálculos físicos
+        self.semieje_mayor_real = distancia_ua * UA
+
+        # Escala logaritmica
+        distancia_visual = ESCALA_DISTANCIA * math.log(distancia_ua + 1)
+        escala_ajustada = escala * ESCALA_TAMAÑO_BASE * (1 + math.log(escala + 0.1))
+
         super().__init__(
             model=modelp,
-            scale=escala,
+            scale=escala_ajustada,
             texture=material,
             collider='sphere'
         )
 
-        # Para convertir unidades astronómicas a unidades de visualización para nuestro entorno
-        ESCALA_DISTANCIA = 20 # 20 unidades = 1 UA (unidades astronómicas)
-
         self.nombre = nombre
-        self.semieje_mayor = distancia_ua * ESCALA_DISTANCIA # Representar distancias proporcionales a las escalas establecidas
+        self.nombre = nombre
+        self.factor_escala_visual = distancia_visual / distancia_ua
+        self.semieje_mayor = distancia_visual
         self.excentricidad = excentricidad
+        
 
-        # La velocidad angular varía según la posición en la órbita
-        # Período en días convertido a nuestra escala de tiempo
-        self.periodo = periodo_orbital
-        self.velocidad_base = (2 * math.pi) / periodo_orbital# Usado para determinar la velocidad angular promedio del objeto
-
+        self.periodo = periodo_orbital * 86400
+        
+        # Calcular velocidad orbital
+        self.velocidad_base = math.sqrt(G * masa_sol / self.semieje_mayor_real)
+        
         self.angulo = 0
         self.factor_velocidad = 1
-
-        # Panel de control (inicialmente invisible)
         self.panel_control = SimulationUI(self)
         self.panel_control.disable()
-
-        # Función de clic
         self.on_click = self.toggle_panel
+        
+        # Calcular parámetros de la órbita
+        self.parametro_orbital = self.semieje_mayor_real * (1 - self.excentricidad**2)
+
 
     def toggle_panel(self):
 
@@ -56,22 +72,38 @@ class Planet(Entity):
 
     # Actualiza la posición del planeta, seguimos un planteamiento basado en orbitas, donde el cálculo de posición es denotado por la orbita
     def actualizar_posicion(self, centro_pos: Vec3, dt: float):
-        # Calcular velocidad angular instantánea según la segunda ley de Kepler
-        radio_actual = self.semieje_mayor * (1 - self.excentricidad * math.cos(self.angulo))
-        velocidad_angular = self.velocidad_base * (self.semieje_mayor / radio_actual)**2 * self.factor_velocidad # Factor de velocidad para ajustar la velocidad
 
-        # Actualizar ángulo con velocidad variable
+        # Aplicar escala de tiempo para acelerar la simulación
+        dt = dt * ESCALA_TIEMPO
+
+        # Calcular radio real según Kepler
+        radio_real = self.semieje_mayor_real * (1 - self.excentricidad * math.cos(self.angulo)) # r = a * (1 - e * cos(θ))
+        
+        # Calcular velocidad angular usando la segunda ley de Kepler
+        # La velocidad angular varía inversamente con el cuadrado de la distancia
+        velocidad_angular = (self.velocidad_base * 
+                           math.sqrt(self.semieje_mayor_real * (1 + self.excentricidad) / 
+                                   (radio_real * (1 - self.excentricidad)))) * self.factor_velocidad
+        
+        # Actualizar ángulo
         self.angulo += velocidad_angular * dt
         
-        # Conversión de corrdenadas polares a cartesianas
-        x = math.cos(self.angulo) * radio_actual
-        z = math.sin(self.angulo) * radio_actual
+        # Convertir radio real a visual
+        radio_visual = (radio_real / UA) * self.factor_escala_visual
         
+        # Calcular posición visual
+        x = radio_visual * math.cos(self.angulo)
+        z = radio_visual * math.sin(self.angulo)
         self.position = centro_pos + Vec3(x, 0, z)
-        self.rotation_y += dt * 20 # Agrega rotación al planeta para simular su rotación sobre su propio eje
 
-        # Debug info
-        print(f"{self.nombre}:")
-        print(f"Radio actual (UA): {radio_actual/20:.2f}")
-        print(f"Velocidad angular: {velocidad_angular:.2f}")
+        # Rotación sobre el eje
+        self.rotation_y += dt * 20
+
+        # Información de debug
+        if self.nombre == "Tierra":  # Solo mostrar debug para un planeta
+            print(f"{self.nombre}:")
+            print(f"Radio real (UA): {radio_real/UA:.2f}")
+            print(f"Radio visual: {radio_visual:.2f}")
+            print(f"Velocidad angular (rad/s): {velocidad_angular:.2e}")
+            print(f"Velocidad orbital (km/s): {(velocidad_angular * radio_real)/1000:.2f}")
 
