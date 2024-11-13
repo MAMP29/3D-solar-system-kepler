@@ -11,7 +11,8 @@ app = Ursina()
 sol = Entity(model= "sphere",  scale=0.2 * 8 * 2, texture = "textures/2k_sun.jpg")
 
 # Textura -> https://www.solarsystemscope.com/textures/
-
+# Datos -> https://astronoo.com/es/articulos/caracteristicas-de-los-planetas.html
+        
 mercurio = Planet(
     nombre="Mercurio",
     distancia_ua=0.39,

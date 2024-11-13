@@ -1,7 +1,6 @@
 import math
-from ursina import Entity
-from ursina import Vec3
-from ursina import scene
+from ursina import *
+from ursina.prefabs.trail_renderer import TrailRenderer
 from simulatioui import SimulationUI
 
 
@@ -56,6 +55,14 @@ class Planet(Entity):
         # Calcular parámetros de la órbita
         self.parametro_orbital = self.semieje_mayor_real * (1 - self.excentricidad**2)
 
+        # Lista para almacenar los puntos del rastro
+        self.orbit_rastro_vertices = []
+
+        self.max_rastro_puntos = 2000 * (distancia_ua / 1)
+
+        self.linea_rastro = Entity(model=Mesh(mode='line', thickness=0.01), color=color.gray)
+
+        #self.create()
 
     def toggle_panel(self):
 
@@ -96,6 +103,9 @@ class Planet(Entity):
         z = radio_visual * math.sin(self.angulo)
         self.position = centro_pos + Vec3(x, 0, z)
 
+
+        self.actualizar_rastro()
+
         # Rotación sobre el eje
         self.rotation_y += dt * 20
 
@@ -106,4 +116,20 @@ class Planet(Entity):
             print(f"Radio visual: {radio_visual:.2f}")
             print(f"Velocidad angular (rad/s): {velocidad_angular:.2e}")
             print(f"Velocidad orbital (km/s): {(velocidad_angular * radio_real)/1000:.2f}")
+            print(f"posicion {self.position}")
+
+
+    def actualizar_rastro(self):
+        # Añadir la posición actual a los vértices
+        self.orbit_rastro_vertices.append(self.position)
+
+        # Limitar el rastro a un número máximo de puntos
+        if len(self.orbit_rastro_vertices) > self.max_rastro_puntos:
+            self.orbit_rastro_vertices.pop(0)  # Remover el punto más antiguo
+
+        # Solo generar la línea si hay al menos dos puntos
+        if len(self.orbit_rastro_vertices) >= 2:
+            self.linea_rastro.model.vertices = self.orbit_rastro_vertices
+            self.linea_rastro.model.generate()
+
 
